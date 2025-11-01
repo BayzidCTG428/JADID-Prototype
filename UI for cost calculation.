@@ -1,0 +1,316 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Shirt, Scissors, Ruler, DollarSign, ChevronRight, Check } from 'lucide-react';
+
+// --- Configuration Data ---
+
+// 1. Base Cost and Estimated Fabric Usage (Meters) per Design
+const designOptions = [
+  { id: 'aline', name: 'A-Line Dress', description: 'Timeless and flattering A-shape.', icon: Shirt, baseCost: 150, estimatedMeters: 2.5 },
+  { id: 'sheath', name: 'Sheath Dress', description: 'Fitted, tailored, and modern.', icon: Scissors, baseCost: 180, estimatedMeters: 2.0 },
+  { id: 'ballgown', name: 'Ballgown', description: 'Dramatic, full skirt for formal events.', icon: Ruler, baseCost: 350, estimatedMeters: 4.0 },
+];
+
+// 2. Fabric Cost per Meter
+const fabricOptions = [
+  { id: 'cotton', name: 'Premium Cotton', color: 'bg-white border border-gray-300', pricePerMeter: 15 },
+  { id: 'silk', name: 'Luxurious Silk', color: 'bg-yellow-100', pricePerMeter: 45 },
+  { id: 'velvet', name: 'Rich Velvet', color: 'bg-purple-900', pricePerMeter: 60 },
+  { id: 'lace', name: 'Elegant Lace', color: 'bg-gray-200', pricePerMeter: 80 },
+];
+
+// 3. Size/Measurement Fields
+const measurementFields = [
+  { id: 'chest', label: 'Bust/Chest (in)', min: 25, max: 60, step: 0.5 },
+  { id: 'waist', label: 'Waist (in)', min: 20, max: 50, step: 0.5 },
+  { id: 'hip', label: 'Hips (in)', min: 30, max: 70, step: 0.5 },
+  { id: 'length', label: 'Overall Length (in)', min: 35, max: 65, step: 1 },
+];
+
+// --- Utility Components ---
+
+const Card = ({ title, icon: Icon, children, isSelected, onClick }) => (
+  <div
+    className={`p-6 bg-white rounded-xl shadow-lg transition-all duration-300 cursor-pointer border-2 ${
+      isSelected ? 'border-indigo-600 ring-4 ring-indigo-200' : 'border-gray-200 hover:shadow-xl hover:border-indigo-400'
+    }`}
+    onClick={onClick}
+  >
+    <div className="flex items-center space-x-3">
+      {Icon && <Icon className={`w-6 h-6 ${isSelected ? 'text-indigo-600' : 'text-gray-500'}`} />}
+      <h3 className={`text-lg font-semibold ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>{title}</h3>
+      {isSelected && <Check className="w-5 h-5 text-green-500 ml-auto" />}
+    </div>
+    <div className="mt-3 text-sm text-gray-600">{children}</div>
+  </div>
+);
+
+// --- Main App Component ---
+
+const initialMeasurements = measurementFields.reduce((acc, field) => ({ ...acc, [field.id]: '' }), {});
+
+const App = () => {
+  const [selectedDesign, setSelectedDesign] = useState(designOptions[0]);
+  const [selectedFabric, setSelectedFabric] = useState(fabricOptions[0]);
+  const [measurements, setMeasurements] = useState(initialMeasurements);
+  const [activeSection, setActiveSection] = useState('design'); // 'design', 'fabric', 'measurements', 'summary'
+
+  const handleMeasurementChange = useCallback((id, value) => {
+    setMeasurements(prev => ({ ...prev, [id]: value }));
+  }, []);
+
+  // Cost Calculation Logic
+  const totalCost = useMemo(() => {
+    const designData = selectedDesign;
+    const fabricData = selectedFabric;
+
+    if (!designData || !fabricData) return 0;
+
+    // 1. Base Design Cost (Complexity + Labor)
+    const baseCost = designData.baseCost;
+
+    // 2. Fabric Cost
+    const fabricMeters = designData.estimatedMeters;
+    const fabricPrice = fabricData.pricePerMeter;
+    const fabricCost = fabricMeters * fabricPrice;
+
+    // 3. Customization/Complexity Multiplier (Simple example: a small penalty for extreme sizes)
+    // Here we'll check if all measurements are filled for a small labor premium
+    const allMeasurementsFilled = measurementFields.every(field => measurements[field.id] !== '');
+    const laborPremium = allMeasurementsFilled ? 50 : 0; // A nominal fee for confirmed measurements
+
+    // 4. Total Cost
+    const total = baseCost + fabricCost + laborPremium;
+
+    // Add Sales Tax (Example: 8% tax)
+    const finalTotal = total * 1.08;
+
+    return finalTotal.toFixed(2);
+  }, [selectedDesign, selectedFabric, measurements]);
+
+
+  // --- Renderer Components for Steps ---
+
+  const StepDesign = () => (
+    <div className="grid md:grid-cols-3 gap-6">
+      {designOptions.map(design => (
+        <Card
+          key={design.id}
+          title={design.name}
+          icon={design.icon}
+          isSelected={selectedDesign.id === design.id}
+          onClick={() => {
+            setSelectedDesign(design);
+            setActiveSection('fabric');
+          }}
+        >
+          <p>{design.description}</p>
+          <p className="mt-2 text-indigo-500 font-bold">${design.baseCost} Base Cost</p>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const StepFabric = () => (
+    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {fabricOptions.map(fabric => (
+        <Card
+          key={fabric.id}
+          title={fabric.name}
+          isSelected={selectedFabric.id === fabric.id}
+          onClick={() => {
+            setSelectedFabric(fabric);
+            setActiveSection('measurements');
+          }}
+        >
+          <div className="flex items-center space-x-2 mt-2">
+            <div className={`w-6 h-6 rounded-full ${fabric.color} shadow-inner`}></div>
+            <span className="text-sm">~${fabric.pricePerMeter}/meter</span>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const StepMeasurements = () => (
+    <div className="grid md:grid-cols-2 gap-6">
+      {measurementFields.map(field => (
+        <div key={field.id} className="relative">
+          <label htmlFor={field.id} className="block text-sm font-medium text-gray-700">
+            {field.label}
+          </label>
+          <div className="mt-1 relative rounded-md shadow-sm">
+            <input
+              type="number"
+              id={field.id}
+              value={measurements[field.id]}
+              onChange={(e) => handleMeasurementChange(field.id, e.target.value)}
+              min={field.min}
+              max={field.max}
+              step={field.step}
+              placeholder={`Enter ${field.label.split(' ')[0]}`}
+              className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 p-3 text-lg transition-colors duration-200"
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">in</span>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="md:col-span-2 mt-4 flex justify-end">
+        <button
+          onClick={() => setActiveSection('summary')}
+          className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 flex items-center"
+        >
+          Review Summary <ChevronRight className="w-5 h-5 ml-2" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const StepSummary = () => {
+    const designData = selectedDesign;
+    const fabricData = selectedFabric;
+    const allMeasurementsFilled = measurementFields.every(field => measurements[field.id] !== '');
+
+    const costBreakdown = useMemo(() => {
+        const base = designData.baseCost;
+        const fabricMeters = designData.estimatedMeters;
+        const fabricPrice = fabricData.pricePerMeter;
+        const material = fabricMeters * fabricPrice;
+        const labor = allMeasurementsFilled ? 50 : 0;
+        const subtotal = base + material + labor;
+        const tax = subtotal * 0.08;
+
+        return [
+            { label: `Base Design (${designData.name})`, value: base.toFixed(2) },
+            { label: `${fabricData.name} (${fabricMeters}m @ $${fabricPrice}/m)`, value: material.toFixed(2) },
+            { label: 'Custom Labor Fee', value: labor.toFixed(2), detail: labor > 0 ? 'Confirmed measurements' : 'Pending measurements' },
+            { label: 'Subtotal', value: subtotal.toFixed(2), isTotal: true },
+            { label: 'Sales Tax (8%)', value: tax.toFixed(2) },
+        ];
+    }, [designData, fabricData, allMeasurementsFilled]);
+
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">Final Cost Review</h2>
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Cost Breakdown</h3>
+          <dl className="space-y-2">
+            {costBreakdown.map((item, index) => (
+              <div key={index} className={`flex justify-between ${item.isTotal ? 'pt-2 border-t border-gray-300 font-bold' : ''}`}>
+                <dt className="text-gray-600 flex items-center">
+                    {item.label}
+                    {item.detail && <span className="ml-2 text-xs text-indigo-500 font-normal">({item.detail})</span>}
+                </dt>
+                <dd className="text-gray-900">${item.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-4 pt-4 border-t-4 border-indigo-600 flex justify-between items-center">
+            <dt className="text-2xl font-bold text-gray-800">Total Estimated Cost</dt>
+            <dd className="text-3xl font-extrabold text-indigo-600">${totalCost}</dd>
+          </div>
+        </div>
+
+        <button
+          onClick={() => alert("Quote request simulated. In a real app, this would submit the configuration to the backend.")}
+          className="w-full py-4 bg-green-600 text-white font-bold text-xl rounded-lg shadow-xl hover:bg-green-700 transition duration-300"
+        >
+          Request Official Quote & Book Fitting
+        </button>
+      </div>
+    );
+  };
+
+
+  // --- Main Render ---
+
+  // Determine which component to display based on activeSection
+  let ActiveComponent;
+  let sectionTitle;
+
+  switch (activeSection) {
+    case 'design':
+      ActiveComponent = StepDesign;
+      sectionTitle = 'Step 1: Choose Your Dress Design';
+      break;
+    case 'fabric':
+      ActiveComponent = StepFabric;
+      sectionTitle = 'Step 2: Select Your Fabric';
+      break;
+    case 'measurements':
+      ActiveComponent = StepMeasurements;
+      sectionTitle = 'Step 3: Input Client Measurements';
+      break;
+    case 'summary':
+      ActiveComponent = StepSummary;
+      sectionTitle = 'Step 4: Review & Finalize';
+      break;
+    default:
+      ActiveComponent = StepDesign;
+      sectionTitle = 'Step 1: Choose Your Dress Design';
+  }
+
+  // Cost Summary Panel Component
+  const CostSummaryPanel = () => (
+    <div className="lg:sticky lg:top-8 lg:h-fit bg-indigo-50 p-6 rounded-xl shadow-2xl border-l-4 border-indigo-600 w-full">
+      <h2 className="text-2xl font-extrabold text-indigo-800 flex items-center mb-4">
+        <DollarSign className="w-6 h-6 mr-2" /> Cost Summary
+      </h2>
+      <dl className="space-y-3 text-lg">
+        <div className="flex justify-between border-b pb-2">
+          <dt className="text-gray-600">Design:</dt>
+          <dd className="font-medium text-indigo-700">{selectedDesign.name}</dd>
+        </div>
+        <div className="flex justify-between border-b pb-2">
+          <dt className="text-gray-600">Fabric:</dt>
+          <dd className="font-medium text-indigo-700">{selectedFabric.name}</dd>
+        </div>
+        <div className="flex justify-between border-b pb-2">
+          <dt className="text-gray-600">Est. Meters:</dt>
+          <dd className="font-medium text-indigo-700">{selectedDesign.estimatedMeters}m</dd>
+        </div>
+        <div className="flex justify-between pt-4">
+          <dt className="text-xl font-bold text-gray-800">TOTAL ESTIMATE:</dt>
+          <dd className="text-3xl font-extrabold text-indigo-600">${totalCost}</dd>
+        </div>
+      </dl>
+      <p className="mt-4 text-xs text-gray-500 italic">
+        *Estimate includes base labor, material cost, and sales tax.
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans p-4 sm:p-8">
+      <script src="https://cdn.tailwindcss.com"></script>
+      <header className="mb-10 text-center">
+        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+          Bespoke Dress Configurator
+        </h1>
+        <p className="mt-2 text-xl text-gray-500">
+          Design your custom garment and get an instant cost estimate.
+        </p>
+      </header>
+
+      <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-10">
+
+        {/* Configuration Panel (Left/Main) */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-xl space-y-8">
+          <div className="flex items-center space-x-4 mb-6 border-b pb-4">
+            <div className="text-sm font-semibold uppercase text-indigo-600">Current Step:</div>
+            <h2 className="text-3xl font-bold text-gray-900">{sectionTitle}</h2>
+          </div>
+          <ActiveComponent />
+        </div>
+
+        {/* Summary Panel (Right/Sticky) */}
+        <div className="lg:col-span-1">
+          <CostSummaryPanel />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
