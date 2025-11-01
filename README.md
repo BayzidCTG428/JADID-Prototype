@@ -1,2 +1,2 @@
 # JADID-Prototype
-This will be a tailoring features software.
+This will be a tailoring featured software.
