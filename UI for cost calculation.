@@ -286,7 +286,7 @@ const App = () => {
       <script src="https://cdn.tailwindcss.com"></script>
       <header className="mb-10 text-center">
         <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-          Bespoke Dress Configurator
+          JADID Dress Configurator
         </h1>
         <p className="mt-2 text-xl text-gray-500">
           Design your custom garment and get an instant cost estimate.
