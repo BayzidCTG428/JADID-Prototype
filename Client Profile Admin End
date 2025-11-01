@@ -1,0 +1,352 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Profile Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+        .status-Received { @apply bg-yellow-100 text-yellow-800; }
+        .status-Processing { @apply bg-blue-100 text-blue-800; }
+        .status-Completed { @apply bg-green-100 text-green-800; }
+        .order-status-pill { @apply inline-block px-3 py-1 rounded-full text-xs font-semibold; }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 10px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 500px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="notification-banner" class="fixed top-4 right-4 p-3 rounded-lg shadow-xl text-sm transition-transform duration-300 transform translate-x-full z-50"></div>
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        <header class="text-center py-6 bg-white rounded-xl shadow-md border-b-4 border-indigo-500">
+            <h1 class="text-3xl font-extrabold text-gray-800">Client Profile Search</h1>
+            <p class="text-gray-500 mt-1">Search client history by email address.</p>
+        </header>
+
+        <!-- Search Bar Card -->
+        <div class="card p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                 </svg>
+                Find Client
+            </h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="email" id="client-email-input" placeholder="Enter client email (e.g., client.b@mail.com)"
+                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                       value="client.b@mail.com">
+                <button onclick="searchClient()"
+                        class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition shadow-md flex-shrink-0">
+                    Search Profile
+                </button>
+            </div>
+            <p id="search-status" class="text-sm mt-3 text-gray-500">Search results will appear here.</p>
+        </div>
+
+        <!-- CLIENT PROFILE DISPLAY AREA -->
+        <div id="profile-container" class="space-y-6 hidden">
+            <!-- Client Details Card -->
+            <div class="card p-6 border-l-4 border-indigo-500">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    Client Details: <span id="client-id-display" class="text-indigo-600"></span>
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- NEW: Client Profile Information -->
+                    <div>
+                        <p class="text-sm text-gray-500">Client Name</p>
+                        <p id="client-name-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Phone Number</p>
+                        <p id="client-phone-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    <div class="lg:col-span-3">
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p id="client-address-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    
+                    <!-- Line separator (for visual clarity) -->
+                    <div class="col-span-full border-t border-gray-100 mt-2 mb-2"></div>
+                    
+                    <!-- Existing: Order Counts -->
+                    <div class="col-span-full sm:col-span-1">
+                        <p class="text-sm text-gray-500">Total Orders Found</p>
+                        <p id="total-orders-count" class="text-3xl font-extrabold text-gray-900">0</p>
+                    </div>
+                    <div class="col-span-full sm:col-span-1">
+                        <p class="text-sm text-gray-500">Completed Orders</p>
+                        <p id="completed-orders-count" class="text-3xl font-extrabold text-green-600">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order History Table -->
+            <div class="card">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Order History</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design & Fabric</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Assigned Employee</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="order-history-list">
+                            <!-- Order rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let db;
+        let auth;
+        let adminUserId = null; 
+        let isAuthReady = false;
+
+        // --- MOCK CLIENT PROFILE DATA ---
+        // In a real application, this data would be fetched from a 'clientProfiles' collection in Firestore.
+        const mockClientProfiles = {
+            "client.b@mail.com": {
+                name: "Bernard Smith",
+                phone: "+1 (555) 123-4567",
+                address: "45 River Rd, Suite 101, New York, NY 10001"
+            },
+            "client.a@mail.com": {
+                name: "Alice Johnson",
+                phone: "+1 (555) 987-6543",
+                address: "22 Oak St, Apt 5B, Chicago, IL 60601"
+            },
+            "client.c@mail.com": {
+                name: "Carla Diaz",
+                phone: "+1 (555) 333-2222",
+                address: "789 Pine Ave, Los Angeles, CA 90012"
+            }
+        };
+        
+        // --- UTILS ---
+
+        function getCollectionPath(name) {
+            if (!adminUserId) {
+                console.error("Admin user not authenticated for collection access.");
+                return null;
+            }
+            // Use the private data path of the Admin/current authenticated user
+            return `artifacts/${appId}/users/${adminUserId}/${name}`; 
+        }
+
+        function showNotification(message, type = 'info') {
+            const notifEl = document.getElementById('notification-banner');
+            notifEl.textContent = message;
+            
+            notifEl.className = 'fixed top-4 right-4 p-3 rounded-lg shadow-xl transition-transform duration-300 transform translate-x-full z-50 text-white';
+            
+            if (type === 'success') {
+                notifEl.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                notifEl.classList.add('bg-red-600');
+            } else {
+                 notifEl.classList.add('bg-blue-600');
+            }
+            
+            setTimeout(() => {
+                notifEl.classList.remove('translate-x-full');
+                notifEl.classList.add('translate-x-0');
+            }, 50);
+
+            setTimeout(() => {
+                notifEl.classList.remove('translate-x-0');
+                notifEl.classList.add('translate-x-full');
+            }, 4000);
+        }
+        
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                adminUserId = user.uid;
+                isAuthReady = true;
+                document.getElementById('search-status').textContent = 'Ready to search client profiles.';
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Sign-in Error:", error);
+                    showNotification("Failed to authenticate. Check console.", 'error');
+                }
+            }
+        });
+
+        // --- SEARCH LOGIC ---
+
+        window.searchClient = async function() {
+            if (!isAuthReady || !db) {
+                showNotification("System not ready. Please wait for initialization.", 'error');
+                return;
+            }
+            
+            const clientEmail = document.getElementById('client-email-input').value.trim();
+            const searchStatusEl = document.getElementById('search-status');
+            const profileContainer = document.getElementById('profile-container');
+            
+            if (!clientEmail) {
+                showNotification("Please enter a client email address.", 'error');
+                return;
+            }
+            
+            profileContainer.classList.add('hidden');
+            searchStatusEl.textContent = `Searching for orders matching: ${clientEmail}...`;
+            
+            // Simulate fetching client profile data
+            const clientProfile = mockClientProfiles[clientEmail.toLowerCase()] || null;
+
+            try {
+                // Fetch orders for the specific client email
+                const ordersRef = collection(db, getCollectionPath('customOrders'));
+                const q = query(ordersRef, where('clientEmail', '==', clientEmail));
+                
+                const querySnapshot = await getDocs(q);
+                const orders = [];
+                
+                querySnapshot.forEach((doc) => {
+                    orders.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderResults(clientEmail, clientProfile, orders);
+                showNotification(`Found ${orders.length} order(s) for ${clientEmail}.`, 'success');
+
+            } catch (error) {
+                console.error("Error fetching client orders:", error);
+                searchStatusEl.textContent = 'Error during search. Check console for details.';
+                showNotification("Search failed. Check console.", 'error');
+            }
+        }
+        
+        // --- RENDERING RESULTS ---
+
+        function renderResults(clientEmail, clientProfile, orders) {
+            const searchStatusEl = document.getElementById('search-status');
+            const profileContainer = document.getElementById('profile-container');
+            const historyListEl = document.getElementById('order-history-list');
+            
+            historyListEl.innerHTML = '';
+            
+            if (orders.length === 0 && !clientProfile) {
+                searchStatusEl.textContent = `No profile or orders found for the email: ${clientEmail}.`;
+                profileContainer.classList.add('hidden');
+                return;
+            }
+
+            // Display Client Details
+            document.getElementById('client-id-display').textContent = clientEmail;
+            
+            // Populate new profile fields
+            const clientName = clientProfile?.name || 'No Profile Found';
+            const clientPhone = clientProfile?.phone || 'N/A';
+            const clientAddress = clientProfile?.address || 'N/A';
+            
+            document.getElementById('client-name-display').textContent = clientName;
+            document.getElementById('client-phone-display').textContent = clientPhone;
+            document.getElementById('client-address-display').textContent = clientAddress;
+            
+            // Order Counts
+            document.getElementById('total-orders-count').textContent = orders.length;
+            
+            const completedCount = orders.filter(o => o.status === 'Completed').length;
+            document.getElementById('completed-orders-count').textContent = completedCount;
+            
+            // Display Order History
+            orders.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+            if (orders.length === 0) {
+                 historyListEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No custom orders found for this client.</td></tr>`;
+            } else {
+                orders.forEach(order => {
+                    const statusClass = `status-${order.status.replace(/\s/g, '')}`;
+                    const submittedDate = order.timestamp instanceof Timestamp 
+                        ? order.timestamp.toDate().toLocaleDateString() 
+                        : 'N/A';
+                        
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-800">${order.orderId || order.id.substring(0, 6)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.designStyle} in ${order.fabricType}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${order.employeeEmail || 'Unassigned'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap"><span class="order-status-pill ${statusClass}">${order.status}</span></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${submittedDate}</td>
+                    `;
+                    historyListEl.appendChild(tr);
+                });
+            }
+            
+            searchStatusEl.textContent = `Displaying profile for ${clientEmail}.`;
+            profileContainer.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
