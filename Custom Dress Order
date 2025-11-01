@@ -1,0 +1,357 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Dress Order Entry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type="number"] { 
+            -moz-appearance: textfield; 
+        }
+        .required-field::after {
+            content: '*';
+            color: #ef4444; /* red-500 */
+            margin-left: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="py-4 border-b border-indigo-200">
+            <h1 class="text-3xl font-extrabold text-indigo-700">New Custom Order</h1>
+            <p class="text-sm text-gray-500 mt-1">Configure fabric, design, and measurements. Price is calculated automatically.</p>
+        </header>
+
+        <!-- Main Form Container -->
+        <div class="card grid lg:grid-cols-2 gap-8">
+            <!-- Left Column: Client & Selections -->
+            <div class="space-y-6">
+                <!-- Client Details -->
+                <div class="space-y-4 border-b pb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">1. Client Details</h2>
+                    <div>
+                        <label for="clientName" class="block text-sm font-medium text-gray-700 required-field">Client Name</label>
+                        <input type="text" id="clientName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Jane Doe" required>
+                    </div>
+                    <div>
+                        <label for="clientEmail" class="block text-sm font-medium text-gray-700 required-field">Client Email</label>
+                        <input type="email" id="clientEmail" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="jane.doe@example.com" required>
+                    </div>
+                </div>
+
+                <!-- Design Selections -->
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-800">2. Selections</h2>
+                    <div>
+                        <label for="designStyle" class="block text-sm font-medium text-gray-700 required-field">Design Style</label>
+                        <select id="designStyle" onchange="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white" required>
+                            <option value="">Select a Style</option>
+                            <option value="A-Line Dress">A-Line Dress ($100 Base)</option>
+                            <option value="Sheath Dress">Sheath Dress ($150 Base)</option>
+                            <option value="Ball Gown">Ball Gown ($250 Base)</option>
+                            <option value="Jumpsuit">Jumpsuit ($180 Base)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="fabricType" class="block text-sm font-medium text-gray-700 required-field">Fabric Type</label>
+                        <select id="fabricType" onchange="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white" required>
+                            <option value="">Select a Fabric</option>
+                            <option value="Cotton">Cotton (x 1.0)</option>
+                            <option value="Linen">Linen (x 1.2)</option>
+                            <option value="Silk">Silk (x 1.8)</option>
+                            <option value="Wool Blend">Wool Blend (x 1.5)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Measurements & Pricing -->
+            <div class="space-y-6">
+                <!-- Measurements -->
+                <div class="space-y-4 border-b pb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">3. Measurements (cm)</h2>
+                    <p class="text-xs text-gray-500">All measurements contribute to material and complexity cost.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="chest" class="block text-sm font-medium text-gray-700 required-field">Chest</label>
+                            <input type="number" id="chest" oninput="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" min="10" placeholder="90" required>
+                        </div>
+                        <div>
+                            <label for="waist" class="block text-sm font-medium text-gray-700 required-field">Waist</label>
+                            <input type="number" id="waist" oninput="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" min="10" placeholder="70" required>
+                        </div>
+                        <div>
+                            <label for="hip" class="block text-sm font-medium text-gray-700 required-field">Hip</label>
+                            <input type="number" id="hip" oninput="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" min="10" placeholder="95" required>
+                        </div>
+                        <div>
+                            <label for="length" class="block text-sm font-medium text-gray-700 required-field">Shoulder to Hem Length</label>
+                            <input type="number" id="length" oninput="calculatePrice()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" min="50" placeholder="140" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Summary -->
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-800">4. Price Calculation</h2>
+                    <div class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-medium text-indigo-700">Estimated Total Price (USD)</span>
+                            <span id="calculatedPrice" class="text-3xl font-extrabold text-indigo-900">$0.00</span>
+                        </div>
+                        <p class="text-xs text-indigo-500 mt-1" id="priceBreakdown">Price breakdown: --</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Submission and Message Area -->
+        <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t">
+            <button id="placeOrderBtn" onclick="placeOrder()" class="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 transition duration-150 disabled:opacity-50">
+                Place Order
+            </button>
+            <div id="messageBox" class="mt-4 sm:mt-0 sm:ml-4 p-3 rounded-lg text-sm transition duration-300 ease-in-out hidden"></div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, query, serverTimestamp, setDoc, updateDoc, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL VARIABLES (Provided by Canvas Environment) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- Pricing Configuration ---
+        const DESIGN_PRICES = {
+            "A-Line Dress": 100,
+            "Sheath Dress": 150,
+            "Ball Gown": 250,
+            "Jumpsuit": 180,
+        };
+
+        const FABRIC_MULTIPLIERS = {
+            "Cotton": 1.0,
+            "Linen": 1.2,
+            "Silk": 1.8,
+            "Wool Blend": 1.5,
+        };
+        
+        const MEASUREMENT_COST_PER_CM = 0.50; // $0.50 for every cm of total girth/length
+
+        // --- DOM Elements ---
+        const priceDisplayEl = document.getElementById('calculatedPrice');
+        const breakdownEl = document.getElementById('priceBreakdown');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const messageBoxEl = document.getElementById('messageBox');
+        
+        // --- UTILS ---
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        }
+
+        // Simple function to generate a human-readable, unique ID for the customer
+        function generateOrderId() {
+            // Using a timestamp and a short random hex string
+            const datePart = new Date().getTime().toString(36).toUpperCase();
+            const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+            return `ORD-${datePart}-${randomPart}`;
+        }
+
+        function showMessage(message, type = 'success') {
+            messageBoxEl.textContent = message;
+            messageBoxEl.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
+            if (type === 'error') {
+                messageBoxEl.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'success') {
+                messageBoxEl.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                 messageBoxEl.classList.add('bg-yellow-100', 'text-yellow-700');
+            }
+            setTimeout(() => {
+                messageBoxEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        function getOrdersCollectionRef() {
+            if (!userId) {
+                throw new Error("User not authenticated.");
+            }
+            // Path: /artifacts/{appId}/users/{userId}/customOrders
+            return collection(db, `artifacts/${appId}/users/${userId}/customOrders`);
+        }
+
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                isAuthReady = true;
+                // Since this is a data entry form, we don't need a listener, but we ensure auth is ready.
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Sign-in Error:", error);
+                    showMessage("Authentication failed. Please refresh.", 'error');
+                }
+            }
+        });
+
+        // --- PRICING LOGIC ---
+
+        window.calculatePrice = function() {
+            const style = document.getElementById('designStyle').value;
+            const fabric = document.getElementById('fabricType').value;
+            const chest = parseFloat(document.getElementById('chest').value) || 0;
+            const waist = parseFloat(document.getElementById('waist').value) || 0;
+            const hip = parseFloat(document.getElementById('hip').value) || 0;
+            const length = parseFloat(document.getElementById('length').value) || 0;
+
+            let baseCost = DESIGN_PRICES[style] || 0;
+            let fabricMultiplier = FABRIC_MULTIPLIERS[fabric] || 1.0;
+            
+            // Calculate measurement cost: total girth + length * cost per cm
+            const totalMeasurement = chest + waist + hip + length;
+            const measurementCost = totalMeasurement * MEASUREMENT_COST_PER_CM;
+            
+            // Calculate Fabric Cost: Base Cost * Multiplier
+            const subtotal = baseCost * fabricMultiplier;
+            
+            // Final Price
+            const rawFinalPrice = subtotal + measurementCost;
+            const finalPrice = Math.ceil(rawFinalPrice); // Round up to nearest dollar for simplicity
+
+            // Update UI
+            priceDisplayEl.textContent = formatCurrency(finalPrice);
+            
+            if (finalPrice > 0) {
+                const breakdownText = `(Base: ${formatCurrency(baseCost)} x Fabric Multiplier: ${fabricMultiplier.toFixed(1)} + Measurement Cost: ${formatCurrency(measurementCost.toFixed(2))})`;
+                breakdownEl.textContent = breakdownText;
+            } else {
+                breakdownEl.textContent = "Price breakdown: Select all options and enter measurements.";
+            }
+
+            // Enable/Disable button
+            const isReady = style && fabric && chest > 0 && waist > 0 && hip > 0 && length > 0 && isAuthReady;
+            placeOrderBtn.disabled = !isReady;
+            
+            return finalPrice;
+        }
+
+        // --- ORDER SUBMISSION ---
+
+        window.placeOrder = async function() {
+            if (!isAuthReady || placeOrderBtn.disabled) {
+                showMessage("Please ensure you are authenticated and all required fields are filled.", 'error');
+                return;
+            }
+
+            const finalPrice = calculatePrice();
+            
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientEmail = document.getElementById('clientEmail').value.trim();
+            const designStyle = document.getElementById('designStyle').value;
+            const fabricType = document.getElementById('fabricType').value;
+            const chest = parseFloat(document.getElementById('chest').value);
+            const waist = parseFloat(document.getElementById('waist').value);
+            const hip = parseFloat(document.getElementById('hip').value);
+            const length = parseFloat(document.getElementById('length').value);
+            
+            if (!clientName || !clientEmail || finalPrice <= 0) {
+                 showMessage("Validation failed. Check all required fields.", 'error');
+                 return;
+            }
+
+            placeOrderBtn.disabled = true;
+            placeOrderBtn.textContent = 'Processing...';
+
+            // Generate the unique Order ID for the customer
+            const orderId = generateOrderId();
+            
+            const orderData = {
+                orderId: orderId, // Human-readable Order ID
+                clientName: clientName,
+                clientEmail: clientEmail,
+                designStyle: designStyle,
+                fabricType: fabricType,
+                measurements: { chest, waist, hip, length, unit: "cm" },
+                finalPrice: finalPrice,
+                status: "Received", // Initial status
+                timestamp: serverTimestamp(),
+                employeeId: userId,
+            };
+
+            try {
+                // We use addDoc to let Firestore generate the unique document ID, 
+                // but we store our custom 'orderId' in the document data.
+                const docRef = await setDoc(doc(getOrdersCollectionRef(), orderId), orderData);
+                
+                showMessage(`Success! Order placed. Assigned Order ID: ${orderId}`, 'success');
+
+                // Clear the form after successful submission
+                document.getElementById('clientName').value = '';
+                document.getElementById('clientEmail').value = '';
+                document.getElementById('designStyle').value = '';
+                document.getElementById('fabricType').value = '';
+                document.getElementById('chest').value = '';
+                document.getElementById('waist').value = '';
+                document.getElementById('hip').value = '';
+                document.getElementById('length').value = '';
+                calculatePrice(); // Reset price display
+                
+            } catch (error) {
+                console.error("Error placing order:", error);
+                showMessage(`Failed to place order: ${error.message}`, 'error');
+            } finally {
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.textContent = 'Place Order';
+            }
+        }
+        
+        // Initial price calculation on load to set up the UI
+        document.addEventListener('DOMContentLoaded', calculatePrice);
+    </script>
+</body>
+</html>
