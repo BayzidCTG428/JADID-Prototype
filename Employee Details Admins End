@@ -1,0 +1,363 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Profile Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+        .status-Received { @apply bg-yellow-100 text-yellow-800; }
+        .status-Processing { @apply bg-blue-100 text-blue-800; }
+        .status-Completed { @apply bg-green-100 text-green-800; }
+        .order-status-pill { @apply inline-block px-3 py-1 rounded-full text-xs font-semibold; }
+        
+        /* Utility for centering and consistency (copied from client dashboard for consistency) */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 10px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 500px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="notification-banner" class="fixed top-4 right-4 p-3 rounded-lg shadow-xl text-sm transition-transform duration-300 transform translate-x-full z-50"></div>
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        <header class="text-center py-6 bg-white rounded-xl shadow-md border-b-4 border-emerald-500">
+            <h1 class="text-3xl font-extrabold text-gray-800">Employee Profile Search</h1>
+            <p class="text-gray-500 mt-1">Search employee performance and order history by email address.</p>
+        </header>
+
+        <!-- Search Bar Card -->
+        <div class="card p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                 </svg>
+                Find Employee
+            </h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="email" id="employee-email-input" placeholder="Enter employee email (e.g., emp.a@mail.com)"
+                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                       value="emp.a@mail.com">
+                <button onclick="searchEmployee()"
+                        class="px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition shadow-md flex-shrink-0">
+                    Search Profile
+                </button>
+            </div>
+            <p id="search-status" class="text-sm mt-3 text-gray-500">Search results will appear here.</p>
+        </div>
+
+        <!-- EMPLOYEE PROFILE DISPLAY AREA -->
+        <div id="profile-container" class="space-y-6 hidden">
+            <!-- Employee Details Card -->
+            <div class="card p-6 border-l-4 border-emerald-500">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    Employee Details: <span id="employee-id-display" class="text-emerald-600"></span>
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- Employee Profile Information -->
+                    <div>
+                        <p class="text-sm text-gray-500">Employee Name</p>
+                        <p id="employee-name-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Position</p>
+                        <p id="employee-position-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Store Name</p>
+                        <p id="employee-store-name-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <p class="text-sm text-gray-500">Store Location</p>
+                        <p id="employee-store-location-display" class="text-lg font-semibold text-gray-900">N/A</p>
+                    </div>
+                    
+                    <!-- Line separator (for visual clarity) -->
+                    <div class="col-span-full border-t border-gray-100 mt-2 mb-2"></div>
+                    
+                    <!-- Performance Metrics: Order Counts -->
+                    <div class="col-span-full sm:col-span-1">
+                        <p class="text-sm text-gray-500">Total Orders Assigned</p>
+                        <p id="total-orders-count" class="text-3xl font-extrabold text-gray-900">0</p>
+                    </div>
+                    <div class="col-span-full sm:col-span-1">
+                        <p class="text-sm text-gray-500">Completed Orders</p>
+                        <p id="completed-orders-count" class="text-3xl font-extrabold text-green-600">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assigned Order History Table -->
+            <div class="card">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Assigned Order History</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Client Email</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design & Fabric</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="order-history-list">
+                            <!-- Order rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let db;
+        let auth;
+        let adminUserId = null; 
+        let isAuthReady = false;
+
+        // --- MOCK EMPLOYEE PROFILE DATA ---
+        // In a real application, this data would be fetched from a 'employeeProfiles' collection.
+        const mockEmployeeProfiles = {
+            "emp.a@mail.com": {
+                name: "Jasmine Kaur",
+                position: "Master Tailor",
+                storeName: "Downtown Atelier",
+                storeLocation: "123 Main St, Anytown, CA"
+            },
+            "emp.b@mail.com": {
+                name: "David Lee",
+                position: "Junior Seamster",
+                storeName: "Suburban Outlet",
+                storeLocation: "404 Side Rd, Suburbia, TX"
+            },
+            "emp.c@mail.com": {
+                name: "Marco Rossi",
+                position: "Pattern Maker",
+                storeName: "Central Studio",
+                storeLocation: "700 Broadway, Midtown, NY"
+            }
+        };
+        
+        // --- UTILS ---
+
+        function getCollectionPath(name) {
+            if (!adminUserId) {
+                console.error("Admin user not authenticated for collection access.");
+                return null;
+            }
+            // Use the private data path of the Admin/current authenticated user
+            return `artifacts/${appId}/users/${adminUserId}/${name}`; 
+        }
+
+        function showNotification(message, type = 'info') {
+            const notifEl = document.getElementById('notification-banner');
+            notifEl.textContent = message;
+            
+            notifEl.className = 'fixed top-4 right-4 p-3 rounded-lg shadow-xl transition-transform duration-300 transform translate-x-full z-50 text-white';
+            
+            if (type === 'success') {
+                notifEl.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                notifEl.classList.add('bg-red-600');
+            } else {
+                 notifEl.classList.add('bg-blue-600');
+            }
+            
+            setTimeout(() => {
+                notifEl.classList.remove('translate-x-full');
+                notifEl.classList.add('translate-x-0');
+            }, 50);
+
+            setTimeout(() => {
+                notifEl.classList.remove('translate-x-0');
+                notifEl.classList.add('translate-x-full');
+            }, 4000);
+        }
+        
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                adminUserId = user.uid;
+                isAuthReady = true;
+                document.getElementById('search-status').textContent = 'Ready to search employee profiles.';
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Sign-in Error:", error);
+                    showNotification("Failed to authenticate. Check console.", 'error');
+                }
+            }
+        });
+
+        // --- SEARCH LOGIC ---
+
+        window.searchEmployee = async function() {
+            if (!isAuthReady || !db) {
+                showNotification("System not ready. Please wait for initialization.", 'error');
+                return;
+            }
+            
+            const employeeEmail = document.getElementById('employee-email-input').value.trim();
+            const searchStatusEl = document.getElementById('search-status');
+            const profileContainer = document.getElementById('profile-container');
+            
+            if (!employeeEmail) {
+                showNotification("Please enter an employee email address.", 'error');
+                return;
+            }
+            
+            profileContainer.classList.add('hidden');
+            searchStatusEl.textContent = `Searching for orders assigned to: ${employeeEmail}...`;
+            
+            // Simulate fetching employee profile data
+            const employeeProfile = mockEmployeeProfiles[employeeEmail.toLowerCase()] || null;
+
+            try {
+                // Fetch orders for the specific employee email
+                // IMPORTANT: We query the 'customOrders' collection where 'employeeEmail' matches the search input.
+                const ordersRef = collection(db, getCollectionPath('customOrders'));
+                const q = query(ordersRef, where('employeeEmail', '==', employeeEmail));
+                
+                const querySnapshot = await getDocs(q);
+                const orders = [];
+                
+                querySnapshot.forEach((doc) => {
+                    orders.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderResults(employeeEmail, employeeProfile, orders);
+                showNotification(`Found ${orders.length} assigned order(s) for ${employeeEmail}.`, 'success');
+
+            } catch (error) {
+                console.error("Error fetching employee orders:", error);
+                searchStatusEl.textContent = 'Error during search. Check console for details.';
+                showNotification("Search failed. Check console.", 'error');
+            }
+        }
+        
+        // --- RENDERING RESULTS ---
+
+        function renderResults(employeeEmail, employeeProfile, orders) {
+            const searchStatusEl = document.getElementById('search-status');
+            const profileContainer = document.getElementById('profile-container');
+            const historyListEl = document.getElementById('order-history-list');
+            
+            historyListEl.innerHTML = '';
+            
+            if (orders.length === 0 && !employeeProfile) {
+                searchStatusEl.textContent = `No profile or assigned orders found for the email: ${employeeEmail}.`;
+                profileContainer.classList.add('hidden');
+                return;
+            }
+
+            // Display Employee ID (Email)
+            document.getElementById('employee-id-display').textContent = employeeEmail;
+            
+            // Populate new profile fields (Position, Store Name, Store Location)
+            const employeeName = employeeProfile?.name || 'No Profile Found';
+            const employeePosition = employeeProfile?.position || 'N/A';
+            const employeeStoreName = employeeProfile?.storeName || 'N/A';
+            const employeeStoreLocation = employeeProfile?.storeLocation || 'N/A';
+            
+            document.getElementById('employee-name-display').textContent = employeeName;
+            document.getElementById('employee-position-display').textContent = employeePosition;
+            document.getElementById('employee-store-name-display').textContent = employeeStoreName;
+            document.getElementById('employee-store-location-display').textContent = employeeStoreLocation;
+            
+            // Performance Metrics: Order Counts
+            document.getElementById('total-orders-count').textContent = orders.length;
+            
+            const completedCount = orders.filter(o => o.status === 'Completed').length;
+            document.getElementById('completed-orders-count').textContent = completedCount;
+            
+            // Display Assigned Order History
+            orders.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+            if (orders.length === 0) {
+                 historyListEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No custom orders currently assigned to this employee.</td></tr>`;
+            } else {
+                orders.forEach(order => {
+                    const statusClass = `status-${order.status.replace(/\s/g, '')}`;
+                    const submittedDate = order.timestamp instanceof Timestamp 
+                        ? order.timestamp.toDate().toLocaleDateString() 
+                        : 'N/A';
+                        
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-800">${order.orderId || order.id.substring(0, 6)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.clientEmail}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${order.designStyle} in ${order.fabricType}</td>
+                        <td class="px-4 py-3 whitespace-nowrap"><span class="order-status-pill ${statusClass}">${order.status}</span></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${submittedDate}</td>
+                    `;
+                    historyListEl.appendChild(tr);
+                });
+            }
+            
+            searchStatusEl.textContent = `Displaying profile for ${employeeEmail}.`;
+            profileContainer.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
