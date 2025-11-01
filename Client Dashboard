@@ -1,0 +1,341 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Custom Order Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f8f8; /* Light background */
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+        }
+        .status-Received { @apply bg-yellow-100 text-yellow-800; }
+        .status-Processing { @apply bg-blue-100 text-blue-800; }
+        .status-Completed { @apply bg-green-100 text-green-800; }
+        .order-status-pill { @apply inline-block px-3 py-1 rounded-full text-xs font-semibold; }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 10px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 500px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        <header class="text-center py-6">
+            <h1 class="text-4xl font-extrabold text-indigo-700">My Custom Tailoring Orders</h1>
+            <p class="text-gray-500 mt-2">Track the progress of your unique designs.</p>
+        </header>
+
+        <!-- CLIENT PROFILE CARD -->
+        <div class="card p-6 border-t-4 border-indigo-500">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                My Profile
+            </h2>
+            <div id="client-profile" class="space-y-2 text-gray-700">
+                <p>Name: <span id="client-name" class="font-semibold text-gray-900">Loading...</span></p>
+                <p>Email: <span id="client-email" class="font-semibold">Loading...</span></p>
+                <p>Phone: <span id="client-phone" class="font-semibold">Loading...</span></p>
+            </div>
+            <button onclick="alert('This feature is for display. Use the Admin Dashboard to update your info.')" class="mt-4 px-4 py-2 bg-gray-100 text-indigo-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition">
+                Update Contact Info
+            </button>
+        </div>
+
+        <!-- ORDERS LIST -->
+        <div class="card">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">My Current & Past Orders</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design & Fabric</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">View</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="orders-list">
+                        <tr><td colspan="5" class="py-4 text-center text-gray-500">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL: Order Detail -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-700">Order Details: <span id="order-modal-id"></span></h3>
+            <div class="space-y-4 pt-2">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Design Style</p>
+                        <p class="font-semibold text-gray-900" id="order-detail-design"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Fabric Type</p>
+                        <p class="font-semibold text-gray-900" id="order-detail-fabric"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Status</p>
+                        <span id="order-detail-status" class="order-status-pill"></span>
+                    </div>
+                     <div>
+                        <p class="text-xs text-gray-500 font-medium">Final Price</p>
+                        <p class="font-bold text-green-600 text-lg" id="order-detail-price"></p>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <p class="text-base font-bold mb-2 text-gray-800">Measurements</p>
+                    <div id="order-detail-measurements" class="text-sm text-gray-700 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <!-- Measurements will be injected here -->
+                    </div>
+                </div>
+                
+                <p class="text-xs text-gray-400 pt-2">Order placed on: <span id="order-detail-date"></span></p>
+
+            </div>
+            <div class="flex justify-end mt-6">
+                <button onclick="closeOrderModal()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, onSnapshot, collection, query, where, getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // This is the client we are simulating being logged in
+        const CLIENT_EMAIL = "client.z@mail.com"; 
+
+        let app;
+        let db;
+        let auth;
+        let adminUserId = null; // We need the Admin's ID to access their private data store
+        let isAuthReady = false;
+        
+        let clientProfile = null;
+        let orders = [];
+
+        // --- UTILS ---
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp || !timestamp.toDate) return 'N/A';
+            return timestamp.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        // IMPORTANT: We assume all customer/order data is stored under the Super Admin's private ID.
+        // The current user running this app is the Admin, so we access their private path.
+        function getCollectionPath(name) {
+            if (!adminUserId) {
+                console.error("Admin user not authenticated for collection access.");
+                return null;
+            }
+            return `artifacts/${appId}/users/${adminUserId}/${name}`;
+        }
+        
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                adminUserId = user.uid; // We use the current user's UID (which is the Admin ID)
+                isAuthReady = true;
+                startClientListeners();
+                renderClientProfile(); // Show loading state until data is fetched
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Sign-in Error:", error);
+                }
+            }
+        });
+
+        // --- REAL-TIME LISTENERS ---
+
+        function startClientListeners() {
+            if (!isAuthReady || !db) return;
+
+            // 1. Listen for the specific Customer's profile
+            try {
+                // Find the customer document matching the client email
+                const customerQuery = query(
+                    collection(db, getCollectionPath('customers')),
+                    where('email', '==', CLIENT_EMAIL)
+                );
+                
+                onSnapshot(customerQuery, (snapshot) => {
+                    if (!snapshot.empty) {
+                        clientProfile = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+                    } else {
+                        clientProfile = { name: "Client Not Found", email: CLIENT_EMAIL, phone: "N/A" };
+                    }
+                    renderClientProfile();
+                }, (error) => {
+                    console.error("Error listening to customer profile:", error);
+                });
+
+            } catch (e) {
+                console.error("Could not set up customer listener:", e);
+            }
+            
+            // 2. Listen for the specific Client's Orders
+            try {
+                const orderQuery = query(
+                    collection(db, getCollectionPath('customOrders')),
+                    where('clientEmail', '==', CLIENT_EMAIL)
+                );
+                
+                onSnapshot(orderQuery, (snapshot) => {
+                    orders = [];
+                    snapshot.forEach((doc) => {
+                        orders.push({ id: doc.id, ...doc.data() });
+                    });
+                    // Sort by newest first
+                    orders.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                    renderOrders();
+                }, (error) => {
+                    console.error("Error listening to client orders:", error);
+                });
+
+            } catch (e) {
+                console.error("Could not set up orders listener:", e);
+            }
+        }
+        
+        // --- RENDERING FUNCTIONS ---
+
+        function renderClientProfile() {
+            if (!clientProfile) {
+                document.getElementById('client-name').textContent = "Authenticating...";
+                document.getElementById('client-email').textContent = CLIENT_EMAIL;
+                document.getElementById('client-phone').textContent = "N/A";
+                return;
+            }
+            
+            document.getElementById('client-name').textContent = clientProfile.name;
+            document.getElementById('client-email').textContent = clientProfile.email;
+            document.getElementById('client-phone').textContent = clientProfile.phone || 'N/A (Please update)';
+        }
+
+        function renderOrders() {
+            const listEl = document.getElementById('orders-list');
+            listEl.innerHTML = '';
+            
+            if (orders.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">You have no orders in the system.</td></tr>`;
+                return;
+            }
+
+            orders.forEach(order => {
+                const statusClass = `status-${order.status.replace(/\s/g, '')}`;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600">${order.orderId || order.id.substring(0, 6)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.designStyle} in ${order.fabricType}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600">${formatCurrency(order.finalPrice)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap"><span class="order-status-pill ${statusClass}">${order.status}</span></td>
+                     <td class="px-4 py-3 whitespace-nowrap">
+                        <button onclick="openOrderModal('${order.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View Details</button>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        }
+        
+        // --- MODAL FUNCTIONS: ORDERS ---
+
+        window.openOrderModal = function(orderDocId) {
+            const order = orders.find(o => o.id === orderDocId);
+            if (!order) return;
+            
+            document.getElementById('order-modal-id').textContent = order.orderId;
+            document.getElementById('order-detail-design').textContent = order.designStyle;
+            document.getElementById('order-detail-fabric').textContent = order.fabricType;
+            document.getElementById('order-detail-price').textContent = formatCurrency(order.finalPrice);
+            
+            const statusEl = document.getElementById('order-detail-status');
+            statusEl.textContent = order.status;
+            statusEl.className = `order-status-pill status-${order.status.replace(/\s/g, '')}`;
+
+            document.getElementById('order-detail-date').textContent = formatDate(order.timestamp);
+            
+            // Render Measurements
+            const measEl = document.getElementById('order-detail-measurements');
+            measEl.innerHTML = '';
+            const m = order.measurements || {};
+            for (const key in m) {
+                 if (key !== 'unit') {
+                    measEl.innerHTML += `<p class="font-semibold capitalize text-indigo-700">${key}: <span class="font-normal text-gray-800">${m[key]} ${m.unit || 'cm'}</span></p>`;
+                 }
+            }
+
+            document.getElementById('order-modal').style.display = 'flex';
+        }
+
+        window.closeOrderModal = function() {
+            document.getElementById('order-modal').style.display = 'none';
+        }
+
+        // Initial render on load
+        document.addEventListener('DOMContentLoaded', renderClientProfile);
+    </script>
+</body>
+</html>
