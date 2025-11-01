@@ -1,0 +1,935 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Super Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+        .tab-button {
+            @apply px-4 py-2 text-base font-medium border-b-2 transition duration-150 ease-in-out;
+        }
+        .tab-active {
+            @apply border-indigo-600 text-indigo-600;
+        }
+        .tab-inactive {
+            @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 10px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 600px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .role-Admin { @apply bg-red-100 text-red-700 font-semibold; }
+        .role-Manager { @apply bg-yellow-100 text-yellow-700 font-semibold; }
+        .role-Employee { @apply bg-blue-100 text-blue-700 font-semibold; }
+        .store-status-Active { @apply bg-green-100 text-green-700; }
+        .store-status-Inactive { @apply bg-red-100 text-red-700; }
+        .order-status-pill { @apply inline-block px-3 py-0.5 rounded-full text-xs font-medium; }
+        .status-Received { @apply bg-yellow-100 text-yellow-800; }
+        .status-Processing { @apply bg-blue-100 text-blue-800; }
+        .status-Completed { @apply bg-green-100 text-green-800; }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 border-b border-indigo-300">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-2 sm:mb-0">Super Admin Control Center</h1>
+            <div class="flex flex-wrap space-x-3 items-center">
+                <button id="seed-btn" onclick="seedAllData()" class="px-4 py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-150 shadow-md text-sm disabled:opacity-50 disabled:bg-gray-400">
+                    Seed All Data
+                </button>
+                <span id="user-display" class="mt-2 sm:mt-0 px-3 py-1 bg-gray-200 text-gray-700 font-medium rounded-lg text-xs truncate max-w-xs">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-gray-200 overflow-x-auto whitespace-nowrap">
+            <button id="tab-stores" onclick="changeView('stores')" class="tab-button tab-active">1. Stores</button>
+            <button id="tab-employees" onclick="changeView('employees')" class="tab-button tab-inactive">2. Employees</button>
+            <button id="tab-customers" onclick="changeView('customers')" class="tab-button tab-inactive">3. Customers</button>
+            <button id="tab-orders" onclick="changeView('orders')" class="tab-button tab-inactive">4. Orders</button>
+        </div>
+
+        <!-- STORES MANAGEMENT VIEW -->
+        <div id="view-stores" class="view-content space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-semibold text-gray-800">Store Locations Management</h2>
+                <button onclick="openStoreModal('add')" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 text-sm">
+                    + Add Store
+                </button>
+            </div>
+            <!-- Sub-feature: Employee Count & Deactivation -->
+            <div class="card overflow-x-auto">
+                <h3 class="text-lg font-medium mb-4">Store Data</h3>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store Name</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Employees</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="stores-list">
+                        <tr><td colspan="5" class="py-4 text-center text-gray-500">Loading stores...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- EMPLOYEES MANAGEMENT VIEW -->
+        <div id="view-employees" class="view-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">Employee Roster & Roles</h2>
+                <div class="flex space-x-3 w-full sm:w-auto">
+                    <!-- Sub-feature: Employee Lookup -->
+                    <input type="text" id="employee-search" oninput="renderEmployees()" placeholder="Search by Name or Email" class="p-2 border rounded-lg text-sm w-full sm:w-56">
+                    <button onclick="openEmployeeModal('add')" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 text-sm">
+                        + Add Employee
+                    </button>
+                </div>
+            </div>
+            <!-- Sub-feature: Role Assignment & Store Reassignment -->
+            <div class="card overflow-x-auto">
+                <h3 class="text-lg font-medium mb-4">Employee Data</h3>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Assigned Store</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="employees-list">
+                        <tr><td colspan="5" class="py-4 text-center text-gray-500">Loading employees...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CUSTOMER MANAGEMENT VIEW -->
+        <div id="view-customers" class="view-content space-y-6 hidden">
+             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">Client Relationship Management</h2>
+                <!-- Sub-feature: Customer Lookup -->
+                <input type="text" id="customer-search" oninput="renderCustomers()" placeholder="Search by Name or Email" class="p-2 border rounded-lg text-sm w-full sm:w-56">
+            </div>
+            <!-- Sub-feature: Order History View & Contact Update -->
+            <div class="card overflow-x-auto">
+                <h3 class="text-lg font-medium mb-4">Customer Data</h3>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Orders</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="customers-list">
+                        <tr><td colspan="5" class="py-4 text-center text-gray-500">Loading customers...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ORDERS MANAGEMENT VIEW -->
+        <div id="view-orders" class="view-content space-y-6 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800">Order Tracking & Fulfillment</h2>
+            <!-- Sub-feature: Filter & Search -->
+            <div class="flex flex-wrap gap-4">
+                <input type="text" id="order-search" oninput="renderOrders()" placeholder="Search by Order ID or Client Name" class="p-2 border rounded-lg text-sm w-full sm:w-56">
+                <select id="order-store-filter" onchange="renderOrders()" class="p-2 border rounded-lg text-sm">
+                    <option value="all">Filter by Store (All)</option>
+                </select>
+                <select id="order-status-filter" onchange="renderOrders()" class="p-2 border rounded-lg text-sm">
+                    <option value="all">Filter by Status (All)</option>
+                    <option value="Received">Received</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+            <div class="card overflow-x-auto">
+                <h3 class="text-lg font-medium mb-4">Order Data</h3>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="orders-list">
+                        <tr><td colspan="7" class="py-4 text-center text-gray-500">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL: Store Management -->
+    <div id="store-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4 text-indigo-700" id="store-modal-title">Add New Store</h3>
+            <input type="hidden" id="storeId">
+            <div class="space-y-4">
+                <div>
+                    <label for="storeName" class="block text-sm font-medium text-gray-700">Store Name</label>
+                    <input type="text" id="storeName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                </div>
+                <div>
+                    <label for="storeLocation" class="block text-sm font-medium text-gray-700">Location</label>
+                    <input type="text" id="storeLocation" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                </div>
+                <div id="store-status-group" class="hidden">
+                     <label for="storeStatus" class="block text-sm font-medium text-gray-700">Status</label>
+                     <select id="storeStatus" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeStoreModal()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Cancel</button>
+                <button onclick="saveStore()" id="store-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Store</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Employee Management -->
+    <div id="employee-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4 text-indigo-700" id="employee-modal-title">Add New Employee</h3>
+            <input type="hidden" id="employeeId">
+            <div class="space-y-4">
+                <div>
+                    <label for="employeeName" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="employeeName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                </div>
+                <div>
+                    <label for="employeeEmail" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="employeeEmail" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                </div>
+                <div>
+                    <!-- Sub-feature: Role Assignment -->
+                    <label for="employeeRole" class="block text-sm font-medium text-gray-700">Role</label>
+                    <select id="employeeRole" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white" required>
+                        <option value="Employee">Employee</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <!-- Sub-feature: Store Reassignment -->
+                    <label for="employeeStore" class="block text-sm font-medium text-gray-700">Assign Store</label>
+                    <select id="employeeStore" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white" required>
+                    </select>
+                    <p id="store-warning" class="text-xs text-red-500 mt-1 hidden">Please add a store first.</p>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeEmployeeModal()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Cancel</button>
+                <button onclick="saveEmployee()" id="employee-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Employee</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL: Customer Management (Contact Update) -->
+    <div id="customer-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4 text-indigo-700">Edit Customer Contact Info</h3>
+            <input type="hidden" id="customerId">
+            <div class="space-y-4">
+                <div>
+                    <label for="customerNameRead" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="customerNameRead" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-gray-50" readonly>
+                </div>
+                <div>
+                    <label for="customerEmail" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="customerEmail" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                </div>
+                <div>
+                    <label for="customerPhone" class="block text-sm font-medium text-gray-700">Phone</label>
+                    <input type="text" id="customerPhone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="555-000-0000">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeCustomerModal()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Cancel</button>
+                <button onclick="saveCustomer()" id="customer-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL: Order Detail & Status Update -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4 text-indigo-700">Order Details: <span id="order-modal-id"></span></h3>
+            <input type="hidden" id="orderDocId">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500">Client Name</p>
+                        <p class="font-medium text-gray-900" id="order-detail-client"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Design & Fabric</p>
+                        <p class="font-medium text-gray-900" id="order-detail-design"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Price</p>
+                        <p class="font-bold text-green-600 text-lg" id="order-detail-price"></p>
+                    </div>
+                     <div>
+                        <p class="text-xs text-gray-500">Store ID</p>
+                        <p class="font-medium text-gray-900" id="order-detail-store"></p>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <p class="text-sm font-semibold mb-2">Measurements (cm)</p>
+                    <div id="order-detail-measurements" class="text-sm text-gray-600 grid grid-cols-4 gap-2"></div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <!-- Sub-feature: Update Status -->
+                    <label for="orderStatusUpdate" class="block text-sm font-medium text-gray-700">Update Status</label>
+                    <select id="orderStatusUpdate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                        <option value="Received">Received</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeOrderModal()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Cancel</button>
+                <button onclick="updateOrderStatus()" id="order-update-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Status</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL VARIABLES (Provided by Canvas Environment) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+        let currentView = 'stores'; 
+        
+        // Data Stores (Real-time synced)
+        let stores = [];
+        let employees = [];
+        let customers = [];
+        let orders = [];
+
+        // --- UTILS ---
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        }
+
+        function getCollectionPath(name) {
+            if (!userId) {
+                console.error("User not authenticated for collection access.");
+                return null;
+            }
+            // All data is stored privately under the Super Admin's ID
+            return `artifacts/${appId}/users/${userId}/${name}`;
+        }
+        
+        function getStoreName(storeId) {
+            const store = stores.find(s => s.id === storeId);
+            return store ? store.name : 'Unassigned/Deleted';
+        }
+        
+        window.changeView = function(view) { // Function exposed globally
+            currentView = view;
+            document.querySelectorAll('.view-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('tab-inactive');
+            });
+
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            document.getElementById(`tab-${view}`).classList.add('tab-active');
+            document.getElementById(`tab-${view}`).classList.remove('tab-inactive');
+            
+            // Explicit render calls (for views that require filtering, like orders)
+            if (view === 'orders') window.renderOrders();
+            if (view === 'employees') window.renderEmployees();
+            if (view === 'customers') window.renderCustomers();
+        }
+
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                document.getElementById('user-display').textContent = `Admin ID: ${userId.substring(0, 8)}...`;
+                isAuthReady = true;
+                startAllListeners();
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Sign-in Error:", error);
+                    document.getElementById('user-display').textContent = "Auth Failed";
+                }
+            }
+        });
+
+        // --- REAL-TIME LISTENERS ---
+
+        function startAllListeners() {
+            if (!isAuthReady || !db) return;
+
+            const collections = ['stores', 'employees', 'customers', 'customOrders'];
+            collections.forEach(colName => {
+                try {
+                    const q = query(collection(db, getCollectionPath(colName)));
+                    onSnapshot(q, (snapshot) => {
+                        const data = [];
+                        snapshot.forEach((doc) => {
+                            data.push({ id: doc.id, ...doc.data() });
+                        });
+                        
+                        if (colName === 'stores') {
+                            stores = data;
+                            window.populateStoreSelects();
+                            window.renderStores();
+                        } else if (colName === 'employees') {
+                            employees = data;
+                            window.renderEmployees();
+                        } else if (colName === 'customers') {
+                            customers = data;
+                            window.renderCustomers();
+                        } else if (colName === 'customOrders') {
+                            orders = data.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                            window.renderOrders();
+                        }
+                        
+                        document.getElementById('seed-btn').disabled = (stores.length > 0 || employees.length > 0 || customers.length > 0);
+                        document.getElementById('seed-btn').textContent = (stores.length > 0) ? 'Data Seeded' : 'Seed All Data';
+                        
+                    }, (error) => {
+                        console.error(`Error listening to ${colName}:`, error);
+                    });
+
+                } catch (e) {
+                    console.error(`Could not set up ${colName} listener:`, e);
+                }
+            });
+        }
+        
+        // --- RENDERING FUNCTIONS ---
+
+        window.renderStores = function() { // Function exposed globally
+            const listEl = document.getElementById('stores-list');
+            listEl.innerHTML = '';
+            
+            if (stores.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No stores found.</td></tr>`;
+                return;
+            }
+
+            stores.forEach(store => {
+                const employeeCount = employees.filter(e => e.assignedStoreId === store.id).length;
+                const statusClass = `store-status-${store.status}`;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${store.name}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${store.location}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-indigo-600 font-semibold">${employeeCount}</td>
+                    <td class="px-4 py-2 whitespace-nowrap"><span class="px-3 py-0.5 rounded-full text-xs font-medium ${statusClass}">${store.status}</span></td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <button onclick="openStoreModal('edit', '${store.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Edit</button>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        }
+
+        window.renderEmployees = function() {
+            const listEl = document.getElementById('employees-list');
+            listEl.innerHTML = '';
+            
+            const searchTerm = document.getElementById('employee-search').value.toLowerCase();
+            let filteredEmployees = employees.filter(e => 
+                e.name.toLowerCase().includes(searchTerm) || e.email.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredEmployees.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No employees found.</td></tr>`;
+                return;
+            }
+
+            filteredEmployees.forEach(employee => {
+                const storeName = getStoreName(employee.assignedStoreId);
+                const roleClass = `role-${employee.role}`;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${employee.name}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${employee.email}</td>
+                    <td class="px-4 py-2 whitespace-nowrap"><span class="px-3 py-0.5 rounded-full text-xs ${roleClass}">${employee.role}</span></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${storeName}</td>
+                     <td class="px-4 py-2 whitespace-nowrap">
+                        <button onclick="openEmployeeModal('edit', '${employee.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Edit</button>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        }
+        
+        window.renderCustomers = function() {
+            const listEl = document.getElementById('customers-list');
+            listEl.innerHTML = '';
+            
+            const searchTerm = document.getElementById('customer-search').value.toLowerCase();
+             let filteredCustomers = customers.filter(c => 
+                c.name.toLowerCase().includes(searchTerm) || c.email.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredCustomers.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No customers found.</td></tr>`;
+                return;
+            }
+
+            filteredCustomers.forEach(customer => {
+                const totalOrders = orders.filter(o => o.clientEmail === customer.email).length;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${customer.name}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${customer.email}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${customer.phone || 'N/A'}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-semibold text-indigo-600">${totalOrders}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <button onclick="openCustomerModal('edit', '${customer.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium mr-3">Edit Contact</button>
+                        <button onclick="alert('Viewing order history for ${customer.name}')" class="text-gray-500 hover:text-gray-900 text-sm font-medium">History</button>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        }
+
+        window.renderOrders = function() {
+            const listEl = document.getElementById('orders-list');
+            listEl.innerHTML = '';
+            
+            const storeFilter = document.getElementById('order-store-filter').value;
+            const statusFilter = document.getElementById('order-status-filter').value;
+            const searchTerm = document.getElementById('order-search').value.toLowerCase();
+            
+            let filteredOrders = orders.filter(order => {
+                const matchesStore = storeFilter === 'all' || order.storeId === storeFilter;
+                const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+                const matchesSearch = order.orderId.toLowerCase().includes(searchTerm) || order.clientName.toLowerCase().includes(searchTerm);
+                return matchesStore && matchesStatus && matchesSearch;
+            });
+            
+            if (filteredOrders.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-gray-500">No orders match the current filters.</td></tr>`;
+                return;
+            }
+
+            filteredOrders.forEach(order => {
+                const storeName = getStoreName(order.storeId);
+                const statusClass = `status-${order.status.replace(/\s/g, '')}`;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-mono text-gray-600">${order.orderId || order.id.substring(0, 6)}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${order.clientName}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${order.designStyle || 'N/A'}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${storeName}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-semibold text-green-600">${formatCurrency(order.finalPrice)}</td>
+                    <td class="px-4 py-2 whitespace-nowrap"><span class="order-status-pill ${statusClass}">${order.status}</span></td>
+                     <td class="px-4 py-2 whitespace-nowrap">
+                        <button onclick="openOrderModal('${order.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View/Edit</button>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        }
+        
+        window.populateStoreSelects = function() { // Function exposed globally
+            const employeeSelect = document.getElementById('employeeStore');
+            const orderFilterSelect = document.getElementById('order-store-filter');
+            
+            // Clear and add default options
+            employeeSelect.innerHTML = '';
+            orderFilterSelect.innerHTML = '<option value="all">Filter by Store (All)</option>';
+
+            if (stores.length === 0) {
+                document.getElementById('store-warning').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('store-warning').classList.add('hidden');
+
+            stores.forEach(store => {
+                const opt1 = document.createElement('option');
+                opt1.value = store.id;
+                opt1.textContent = store.name;
+                employeeSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = store.id;
+                opt2.textContent = store.name;
+                orderFilterSelect.appendChild(opt2);
+            });
+        }
+        
+        // --- MODAL & CRUD FUNCTIONS: STORES ---
+
+        window.openStoreModal = function(mode, storeId = null) {
+            const modal = document.getElementById('store-modal');
+            const titleEl = document.getElementById('store-modal-title');
+            const statusGroup = document.getElementById('store-status-group');
+            document.getElementById('storeId').value = storeId || '';
+
+            if (mode === 'add') {
+                titleEl.textContent = 'Add New Store';
+                document.getElementById('storeName').value = '';
+                document.getElementById('storeLocation').value = '';
+                statusGroup.classList.add('hidden');
+            } else { // edit mode
+                const store = stores.find(s => s.id === storeId);
+                if (!store) return;
+                titleEl.textContent = `Edit Store: ${store.name}`;
+                document.getElementById('storeName').value = store.name;
+                document.getElementById('storeLocation').value = store.location;
+                document.getElementById('storeStatus').value = store.status || 'Active';
+                statusGroup.classList.remove('hidden');
+            }
+            modal.style.display = 'flex';
+        }
+        window.closeStoreModal = function() {
+            document.getElementById('store-modal').style.display = 'none';
+        }
+        
+        window.saveStore = async function() {
+            const name = document.getElementById('storeName').value.trim();
+            const location = document.getElementById('storeLocation').value.trim();
+            const storeId = document.getElementById('storeId').value;
+            const status = document.getElementById('storeStatus').value;
+            const btn = document.getElementById('store-save-btn');
+            
+            if (!name || !location || !isAuthReady) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            try {
+                const data = { name, location, status: storeId ? status : 'Active' };
+                const docRef = storeId 
+                    ? doc(db, getCollectionPath('stores'), storeId) 
+                    : doc(collection(db, getCollectionPath('stores')));
+
+                await setDoc(docRef, {...data, createdAt: serverTimestamp()}, { merge: true });
+                closeStoreModal();
+            } catch (error) {
+                console.error("Error saving store:", error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Store';
+            }
+        }
+        
+        // --- MODAL & CRUD FUNCTIONS: EMPLOYEES ---
+
+        window.openEmployeeModal = function(mode, employeeId = null) {
+            window.populateStoreSelects();
+            const modal = document.getElementById('employee-modal');
+            const titleEl = document.getElementById('employee-modal-title');
+            document.getElementById('employeeId').value = employeeId || '';
+
+            if (mode === 'add') {
+                titleEl.textContent = 'Add New Employee';
+                document.getElementById('employeeName').value = '';
+                document.getElementById('employeeEmail').value = '';
+                document.getElementById('employeeRole').value = 'Employee';
+            } else { // edit mode
+                const emp = employees.find(e => e.id === employeeId);
+                if (!emp) return;
+                titleEl.textContent = `Edit Employee: ${emp.name}`;
+                document.getElementById('employeeName').value = emp.name;
+                document.getElementById('employeeEmail').value = emp.email;
+                document.getElementById('employeeRole').value = emp.role;
+                document.getElementById('employeeStore').value = emp.assignedStoreId;
+            }
+            
+            if (stores.length === 0) {
+                 document.getElementById('employee-save-btn').disabled = true;
+            } else {
+                 document.getElementById('employee-save-btn').disabled = false;
+            }
+            modal.style.display = 'flex';
+        }
+        window.closeEmployeeModal = function() {
+            document.getElementById('employee-modal').style.display = 'none';
+        }
+        
+        window.saveEmployee = async function() {
+            const name = document.getElementById('employeeName').value.trim();
+            const email = document.getElementById('employeeEmail').value.trim();
+            const role = document.getElementById('employeeRole').value;
+            const assignedStoreId = document.getElementById('employeeStore').value;
+            const employeeId = document.getElementById('employeeId').value;
+            const btn = document.getElementById('employee-save-btn');
+            
+            if (!name || !email || !assignedStoreId || !isAuthReady) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            try {
+                const data = { name, email, role, assignedStoreId };
+                const docRef = employeeId 
+                    ? doc(db, getCollectionPath('employees'), employeeId) 
+                    : doc(collection(db, getCollectionPath('employees')));
+
+                await setDoc(docRef, {...data, createdAt: serverTimestamp()}, { merge: true });
+                closeEmployeeModal();
+            } catch (error) {
+                console.error("Error saving employee:", error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Employee';
+            }
+        }
+        
+        // --- MODAL & CRUD FUNCTIONS: CUSTOMERS ---
+        
+        window.openCustomerModal = function(mode, customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            document.getElementById('customerId').value = customerId;
+            document.getElementById('customerNameRead').value = customer.name;
+            document.getElementById('customerEmail').value = customer.email;
+            document.getElementById('customerPhone').value = customer.phone || '';
+            
+            document.getElementById('customer-modal').style.display = 'flex';
+        }
+
+        window.closeCustomerModal = function() {
+            document.getElementById('customer-modal').style.display = 'none';
+        }
+
+        window.saveCustomer = async function() {
+            const customerId = document.getElementById('customerId').value;
+            const email = document.getElementById('customerEmail').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            const btn = document.getElementById('customer-save-btn');
+
+            if (!customerId || !email || !isAuthReady) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const docRef = doc(db, getCollectionPath('customers'), customerId);
+                await updateDoc(docRef, { email, phone });
+                closeCustomerModal();
+            } catch (error) {
+                console.error("Error saving customer:", error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            }
+        }
+        
+        // --- MODAL & CRUD FUNCTIONS: ORDERS ---
+
+        window.openOrderModal = function(orderDocId) {
+            const order = orders.find(o => o.id === orderDocId);
+            if (!order) return;
+            
+            document.getElementById('orderDocId').value = orderDocId;
+            document.getElementById('order-modal-id').textContent = order.orderId;
+            document.getElementById('order-detail-client').textContent = `${order.clientName} (${order.clientEmail})`;
+            document.getElementById('order-detail-design').textContent = `${order.designStyle} in ${order.fabricType}`;
+            document.getElementById('order-detail-price').textContent = formatCurrency(order.finalPrice);
+            document.getElementById('order-detail-store').textContent = `${getStoreName(order.storeId)} (${order.storeId})`;
+            
+            document.getElementById('orderStatusUpdate').value = order.status;
+            
+            // Render Measurements
+            const measEl = document.getElementById('order-detail-measurements');
+            measEl.innerHTML = '';
+            const m = order.measurements || {};
+            for (const key in m) {
+                 if (key !== 'unit') {
+                    measEl.innerHTML += `<p class="font-semibold capitalize">${key}: <span class="font-normal">${m[key]} ${m.unit || 'cm'}</span></p>`;
+                 }
+            }
+
+            document.getElementById('order-modal').style.display = 'flex';
+        }
+
+        window.closeOrderModal = function() {
+            document.getElementById('order-modal').style.display = 'none';
+        }
+
+        window.updateOrderStatus = async function() {
+            const orderDocId = document.getElementById('orderDocId').value;
+            const newStatus = document.getElementById('orderStatusUpdate').value;
+            const btn = document.getElementById('order-update-btn');
+
+            if (!orderDocId || !newStatus || !isAuthReady) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            try {
+                const docRef = doc(db, getCollectionPath('customOrders'), orderDocId);
+                await updateDoc(docRef, { status: newStatus });
+                closeOrderModal();
+            } catch (error) {
+                console.error("Error updating order status:", error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Status';
+            }
+        }
+
+        // --- SEED DATA FUNCTION (For quick startup) ---
+        // (Existing function from previous response, updated to include new fields)
+        window.seedAllData = async function() {
+            if (!isAuthReady) return;
+            
+            const seedBtn = document.getElementById('seed-btn');
+            if (seedBtn.disabled) return;
+
+            seedBtn.disabled = true;
+            seedBtn.textContent = 'Seeding...';
+
+            // 1. Seed Stores
+            const seededStores = [
+                { name: "City Center Flagship", location: "New York, NY", id: 'STORE001', status: 'Active' },
+                { name: "Suburban Outlet", location: "Atlanta, GA", id: 'STORE002', status: 'Active' },
+                { name: "Online Headquarters", location: "San Francisco, CA", id: 'STORE003', status: 'Inactive' }
+            ];
+            
+            const storePromises = seededStores.map(store => {
+                const docRef = doc(db, getCollectionPath('stores'), store.id);
+                return setDoc(docRef, { ...store, createdAt: serverTimestamp() });
+            });
+
+            // 2. Seed Employees
+            const seededEmployees = [
+                { name: "Robert Admin", email: "robert@admin.com", role: "Admin", assignedStoreId: 'STORE003' },
+                { name: "Samantha Manager", email: "samantha@manager.com", role: "Manager", assignedStoreId: 'STORE001' },
+                { name: "Employee A", email: "employee.a@store1.com", role: "Employee", assignedStoreId: 'STORE001' },
+                { name: "Employee B", email: "employee.b@store2.com", role: "Employee", assignedStoreId: 'STORE002' },
+            ];
+            
+            const employeePromises = seededEmployees.map(emp => {
+                const docRef = doc(collection(db, getCollectionPath('employees')));
+                return setDoc(docRef, { ...emp, createdAt: serverTimestamp() });
+            });
+            
+            // 3. Seed Customers
+            const seededCustomers = [
+                { name: "Client Z", email: "client.z@mail.com", phone: "555-1234", id: 'CLIENTZ' },
+                { name: "Client Y", email: "client.y@mail.com", phone: "555-5678", id: 'CLIENTY' }
+            ];
+            
+            const customerPromises = seededCustomers.map(cust => {
+                const docRef = doc(db, getCollectionPath('customers'), cust.id);
+                return setDoc(docRef, { ...cust, createdAt: serverTimestamp() });
+            });
+
+            // 4. Seed Orders (linking to stores and customers)
+            const seededOrders = [
+                { orderId: 'ORD-9876', clientName: "Client Z", clientEmail: "client.z@mail.com", finalPrice: 450.00, status: "Completed", storeId: 'STORE001', designStyle: "Sheath Dress", fabricType: "Linen", measurements: { chest: 90, waist: 70, hip: 95, length: 140, unit: "cm" } },
+                { orderId: 'ORD-5432', clientName: "Client Y", clientEmail: "client.y@mail.com", finalPrice: 210.50, status: "Processing", storeId: 'STORE002', designStyle: "A-Line Dress", fabricType: "Cotton", measurements: { chest: 85, waist: 65, hip: 90, length: 120, unit: "cm" } },
+                { orderId: 'ORD-1212', clientName: "Client Z", clientEmail: "client.z@mail.com", finalPrice: 890.00, status: "Received", storeId: 'STORE001', designStyle: "Ball Gown", fabricType: "Silk", measurements: { chest: 100, waist: 80, hip: 105, length: 160, unit: "cm" } },
+                { orderId: 'ORD-4444', clientName: "Client Y", clientEmail: "client.y@mail.com", finalPrice: 150.00, status: "Completed", storeId: 'STORE003', designStyle: "Jumpsuit", fabricType: "Wool Blend", measurements: { chest: 95, waist: 75, hip: 100, length: 150, unit: "cm" } },
+            ];
+
+            const orderPromises = seededOrders.map(order => {
+                const docRef = doc(db, getCollectionPath('customOrders'), order.orderId);
+                return setDoc(docRef, { ...order, timestamp: serverTimestamp() });
+            });
+
+            try {
+                await Promise.all([...storePromises, ...employeePromises, ...customerPromises, ...orderPromises]);
+                console.log("All sample data seeded successfully.");
+            } catch (error) {
+                console.error("Error seeding data:", error);
+            } finally {
+                seedBtn.textContent = 'Data Seeded';
+                seedBtn.disabled = true;
+            }
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            window.changeView('stores'); // Updated to use global function
+        });
+    </script>
+</body>
+</html>
